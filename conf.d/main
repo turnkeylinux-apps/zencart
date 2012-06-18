@@ -90,6 +90,10 @@ $MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET pwd_last_change_date=\"$DATE\"
 $MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET last_login_date=\"$DATE\" WHERE admin_name=\"admin\";"
 $MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET reset_token=\"\" WHERE admin_name=\"admin\";"
 
+# secure sensitive files
+chmod 640 $WEBROOT/includes/configure.php 
+chmod 640 $WEBROOT/admin/includes/configure.php 
+
 # stop services
 /etc/init.d/mysql stop
 /etc/init.d/apache2 stop
