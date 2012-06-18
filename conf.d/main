@@ -12,3 +12,22 @@ DOMAIN=www.example.com
 SRC=/usr/local/src
 WEBROOT=/var/www/zencart
 
+# unpack and configure
+unzip $SRC/zen-cart-*.zip -d $(dirname $WEBROOT)
+mv $(dirname $WEBROOT)/zen-cart-* $WEBROOT
+rm $SRC/zen-cart-*.zip
+chown -R root:root $WEBROOT
+chown -R www-data:www-data $WEBROOT/pub
+chown -R www-data:www-data $WEBROOT/media
+chown -R www-data:www-data $WEBROOT/cache
+chown -R www-data:www-data $WEBROOT/images
+chown -R www-data:www-data $WEBROOT/admin/backups
+chown -R www-data:www-data $WEBROOT/admin/images/graphs
+chown -R www-data:www-data $WEBROOT/includes/languages/english/html_includes
+
+mv $WEBROOT/includes/dist-configure.php $WEBROOT/includes/configure.php 
+mv $WEBROOT/admin/includes/dist-configure.php $WEBROOT/admin/includes/configure.php 
+
+chown www-data:www-data $WEBROOT/includes/configure.php 
+chown www-data:www-data $WEBROOT/admin/includes/configure.php 
+
