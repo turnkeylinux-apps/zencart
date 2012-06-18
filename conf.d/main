@@ -1,0 +1,14 @@
+#!/bin/sh -ex
+
+DB_NAME=zencart
+DB_USER=zencart
+DB_PASS=$(mcookie)
+
+ADMIN_NAME=admin
+ADMIN_PASS=turnkey
+ADMIN_MAIL=admin@example.com
+DOMAIN=www.example.com
+
+SRC=/usr/local/src
+WEBROOT=/var/www/zencart
+
