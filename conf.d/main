@@ -79,6 +79,17 @@ $CURL "${URL}finished"
 rm -f /tmp/cookie
 rm -rf $WEBROOT/zc_install
 
+# set admin password (installer requires number)
+SALT="1a"
+HASH=$(echo -n ${SALT}${ADMIN_PASS} | md5sum | cut -d " " -f 1)
+$MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET admin_pass=\"${HASH}:${SALT}\" WHERE admin_name=\"admin\";"
+
+# perform tweaks so user isn't asked to reset password
+DATE=$(date +"%Y-%m-%d %H:%M:%S")
+$MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET pwd_last_change_date=\"$DATE\" WHERE admin_name=\"admin\";"
+$MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET last_login_date=\"$DATE\" WHERE admin_name=\"admin\";"
+$MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET reset_token=\"\" WHERE admin_name=\"admin\";"
+
 # stop services
 /etc/init.d/mysql stop
 /etc/init.d/apache2 stop
