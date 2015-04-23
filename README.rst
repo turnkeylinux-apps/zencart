@@ -21,7 +21,7 @@ and on top of that:
   password recovery).
 - Webmin modules for configuring Apache2, PHP, MySQL and Postfix.
 
-Credentials *(passwords set at first boot)*
+Credentials (passwords set at first boot)
 -------------------------------------------
 
 -  Webmin, SSH, MySQL, phpMyAdmin: username **root**
