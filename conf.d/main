@@ -45,8 +45,8 @@ a2enmod rewrite
 /etc/init.d/apache2 start
 
 # setup the database
-MYSQL_BATCH="mysql --user=root --password=$MYSQL_PASS --batch"
-MYSQL_ADMIN="mysqladmin --user=root --password=$MYSQL_PASS"
+MYSQL_BATCH="mysql --user=root --password=$DB_PASS --batch"
+MYSQL_ADMIN="mysqladmin --user=root --password=$DB_PASS"
 
 $MYSQL_ADMIN create $DB_NAME
 $MYSQL_BATCH --execute "grant all privileges on $DB_NAME.* to $DB_USER@localhost identified by '$DB_PASS'; flush privileges;"
@@ -62,18 +62,18 @@ CURL="curl -c /tmp/cookie -b /tmp/cookie"
 $CURL "${URL}license" --data "submit=Continue"
 $CURL "${URL}license" --data "license_consent=agree&submit=Continue"
 $CURL "${URL}inspect" --data "submit=+Install+&zcinst%5Blanguage%5D=english&zcinst%5BDIR_FS_SQL_CACHE%5D=$ZC_CACHE"
-$CURL "${URL}database_setup" --data "db_type=mysql&db_coll=utf8&db_host=localhost&db_username=$DB_USER&db_pass=$DB_PASS&db_name=$DB_NAME&db_prefix=&cache_type=none&sql_cache_dir=$ZC_CACHE&submit=Save+Database+Settings&zcinst%5Blanguage%5D=english&zcinst%5BDIR_FS_SQL_CACHE%5D=$ZC_CACHE"
-$CURL "${URL}system_setup" --data "physical_path=$ZC_ROOT&virtual_http_path=http%3A%2F%2F$DOMAIN&virtual_https_server=https%3A%2F%2F$DOMAIN&virtual_https_path=https%3A%2F%2F$DOMAIN&enable_ssl=false&enable_ssl_admin=true&submit=Save+System+Settings&zcinst%5Blanguage%5D=english&zcinst%5BDIR_FS_SQL_CACHE%5D=$ZC_CACHE&zcinst%5BDB_TYPE%5D=mysql&zcinst%5BDB_PREFIX%5D=&zcinst%5BDB_CHARSET%5D=utf8&zcinst%5BDB_SERVER%5D=localhost&zcinst%5BDB_SERVER_USERNAME%5D=$DB_USER&zcinst%5BDB_SERVER_PASSWORD%5D=$DB_PASS&zcinst%5BDB_DATABASE%5D=$DB_NAME&zcinst%5BSQL_CACHE_METHOD%5D=none"
+$CURL "${URL}database_setup" --data "db_type=mysql&db_coll=utf8&db_host=localhost&db_username=$DB_USER&db_pass=$DB_PASS&db_name=$DB_NAME&db_prefix=&cache_type=none&sql_cache_dir=$ZC_CACHE&submit=Save+Database+Settings&zcinst%5Blanguage%5D=english&zcinst%5BDIR_FS_SQL_CACHE%5D=$ZC_CACHE&zcinst%5BDB_TYPE%5D=mysql&zcinst%5BDB_PREFIX%5D=&zcinst%5BDB_CHARSET%5D=utf8&zcinst%5BDB_SERVER%5D=localhost&zcinst%5BDB_SERVER_USERNAME%5D=$DB_USER&zcinst%5BDB_SERVER_PASSWORD%5D=$DB_PASS&zcinst%5BDB_DATABASE%5D=$DB_NAME&zcinst%5BSQL_CACHE_METHOD%5D=none"
+$CURL "${URL}system_setup" --data "$ZC_ROOT&virtual_http_path=http%3A%2F%2F$DOMAIN&virtual_https_server=https%3A%2F%2F$DOMAIN&virtual_https_path=https%3A%2F%2F$DOMAIN&enable_ssl=false&enable_ssl_admin=true&submit=Save+System+Settings&zcinst%5Blanguage%5D=english&zcinst%5BDIR_FS_SQL_CACHE%5D=$ZC_CACHE&zcinst%5BDB_TYPE%5D=mysql&zcinst%5BDB_PREFIX%5D=&zcinst%5BDB_CHARSET%5D=utf8&zcinst%5BDB_SERVER%5D=localhost&zcinst%5BDB_SERVER_USERNAME%5D=$DB_USER&zcinst%5BDB_SERVER_PASSWORD%5D=$DB_PASS&zcinst%5BDB_DATABASE%5D=$DB_NAME&zcinst%5BSQL_CACHE_METHOD%5D=none"
 $CURL "${URL}config_checkup&action=write"
 
 ## fix db password - weird bug!
-CONF=$WEBROOT/includes/configure.php 
-sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
-CONF=$WEBROOT/admin/includes/configure.php 
-sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
+#CONF=$WEBROOT/includes/configure.php 
+#sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
+#CONF=$WEBROOT/admin/includes/configure.php 
+#sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
 
 $CURL "${URL}store_setup" --data "store_name=TurnKey+ZenCart&store_owner=Admin&store_owner_email=$EMAIL&store_country=223&store_zone=0&store_address=Store+Name%0D%0A++Address%0D%0A++Country%0D%0A++Phone&store_default_language=en&store_default_currency=USD&demo_install=true&submit=Save+Store+Settings&zcinst%5Blanguage%5D=english"
-$CURL "${URL}admin_setup" --data "admin_username=$ADMIN_NAME&admin_pass=${ADMIN_PASS}1&admin_pass_confirm=${ADMIN_PASS}1&admin_email=$EMAIL&submit=Save+Admin+Settings"
+$CURL "${URL}admin_setup" --data "admin_username=$ADMIN_NAME&admin_pass=${ADMIN_PASS}1&admin_pass_confirm=${ADMIN_PASS}1&admin_email=$EMAIL&check_for_updates=0&submit=Save+Admin+Settings"
 $CURL "${URL}finished"
 
 rm -f /tmp/cookie
