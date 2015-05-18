@@ -37,7 +37,7 @@ PHPINI=/etc/php5/apache2/php.ini
 sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
 
 # configure apache
-a2dissite default
+a2dissite 000-default
 a2ensite zencart
 a2enmod rewrite
 
