@@ -12,6 +12,7 @@ import re
 import sys
 import getopt
 import inithooks_cache
+
 import string
 import random
 import hashlib
@@ -78,6 +79,8 @@ def main():
 
     if domain == "DEFAULT":
         domain = DEFAULT_DOMAIN
+
+    inithooks_cache.write('APP_DOMAIN', domain)
 
     salt = "".join(random.choice(string.letters) for line in range(2))
     hashpass = ":".join([hashlib.md5(salt + password).hexdigest(), salt])
