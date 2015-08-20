@@ -11,6 +11,7 @@ Option:
 import re
 import sys
 import getopt
+import inithooks_cache
 import string
 import random
 import hashlib
@@ -63,6 +64,8 @@ def main():
             "ZenCart Email",
             "Enter email address for the ZenCart 'admin' account.",
             "admin@example.com")
+
+    inithooks_cache.write('APP_EMAIL', email)
 
     if not domain:
         if 'd' not in locals():
