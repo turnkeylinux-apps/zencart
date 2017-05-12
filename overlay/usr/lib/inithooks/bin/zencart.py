@@ -86,15 +86,15 @@ def main():
     hashpass = ":".join([hashlib.md5(salt + password).hexdigest(), salt])
 
     m = MySQL()
-    m.execute('UPDATE zencart.admin SET admin_pass=\"%s\" WHERE admin_name=\"admin\";' % hashpass)
-    m.execute('UPDATE zencart.admin SET admin_email=\"%s\" WHERE admin_name=\"admin\";' % email)
+    m.execute('UPDATE zencart.zen_admin SET admin_pass=\"%s\" WHERE admin_name=\"admin\";' % hashpass)
+    m.execute('UPDATE zencart.zen_admin SET admin_email=\"%s\" WHERE admin_name=\"admin\";' % email)
 
     # perform tweaks so user isn't asked to reset password
     now = datetime.now()
     date = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    m.execute('UPDATE zencart.admin SET pwd_last_change_date=\"%s\" WHERE admin_name=\"admin\";' % date)
-    m.execute('UPDATE zencart.admin SET last_login_date=\"%s\" WHERE admin_name=\"admin\";' % date)
+    m.execute('UPDATE zencart.zen_admin SET pwd_last_change_date=\"%s\" WHERE admin_name=\"admin\";' % date)
+    m.execute('UPDATE zencart.zen_admin SET last_login_date=\"%s\" WHERE admin_name=\"admin\";' % date)
 
     # set domain
     conf = "/var/www/zencart/includes/configure.php"

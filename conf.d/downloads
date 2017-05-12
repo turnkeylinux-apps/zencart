@@ -5,7 +5,7 @@ dl() {
     cd $2; curl -L -f -O $PROXY $1; cd -
 }
 
-VERSION="CURRENT%20-%20Zen%20Cart%201.5.x%20Series/zen-cart-v1.5.4-12302014.zip"
+VERSION="CURRENT%20-%20Zen%20Cart%201.5.x%20Series/zen-cart-v1.5.5e-03082017.zip"
 URL="http://sourceforge.net/projects/zencart/files/$VERSION"
 
 dl $URL /usr/local/src

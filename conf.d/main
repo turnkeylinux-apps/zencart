@@ -3,6 +3,7 @@
 DB_NAME=zencart
 DB_USER=zencart
 DB_PASS=$(mcookie)
+DB_PREFIX=zen_
 
 ADMIN_NAME=admin
 ADMIN_PASS=turnkey
@@ -42,8 +43,8 @@ a2ensite zencart
 a2enmod rewrite
 
 # start services
-/etc/init.d/mysql start
-/etc/init.d/apache2 start
+service mysql start
+service apache2 start
 
 # setup the database
 MYSQL_BATCH="mysql --user=root --password=$MYSQL_PASS --batch"
@@ -60,22 +61,28 @@ ZC_CACHE=$(echo $WEBROOT/cache | sed "s/\//%2F/g")
 URL="http://127.0.0.1/zc_install/index.php?main_page="
 CURL="curl -c /tmp/cookie -b /tmp/cookie"
 
-$CURL "${URL}license" --data "submit=Continue"
-$CURL "${URL}license" --data "license_consent=agree&submit=Continue"
-$CURL "${URL}inspect" --data "submit=+Install+&zcinst%5Blanguage%5D=english&zcinst%5BDIR_FS_SQL_CACHE%5D=$ZC_CACHE"
-$CURL "${URL}database_setup" --data "db_type=mysql&db_coll=utf8&db_host=localhost&db_username=$DB_USER&db_pass=$DB_PASS&db_name=$DB_NAME&db_prefix=&cache_type=none&sql_cache_dir=$ZC_CACHE&submit=Save+Database+Settings&zcinst%5Blanguage%5D=english&zcinst%5BDIR_FS_SQL_CACHE%5D=$ZC_CACHE&zcinst%5BDB_TYPE%5D=mysql&zcinst%5BDB_PREFIX%5D=&zcinst%5BDB_CHARSET%5D=utf8&zcinst%5BDB_SERVER%5D=localhost&zcinst%5BDB_SERVER_USERNAME%5D=$DB_USER&zcinst%5BDB_SERVER_PASSWORD%5D=$DB_PASS&zcinst%5BDB_DATABASE%5D=$DB_NAME&zcinst%5BSQL_CACHE_METHOD%5D=none"
-$CURL "${URL}system_setup" --data "$ZC_ROOT&virtual_http_path=http%3A%2F%2F$DOMAIN&virtual_https_server=https%3A%2F%2F$DOMAIN&virtual_https_path=https%3A%2F%2F$DOMAIN&enable_ssl=false&enable_ssl_admin=true&submit=Save+System+Settings&zcinst%5Blanguage%5D=english&zcinst%5BDIR_FS_SQL_CACHE%5D=$ZC_CACHE&zcinst%5BDB_TYPE%5D=mysql&zcinst%5BDB_PREFIX%5D=&zcinst%5BDB_CHARSET%5D=utf8&zcinst%5BDB_SERVER%5D=localhost&zcinst%5BDB_SERVER_USERNAME%5D=$DB_USER&zcinst%5BDB_SERVER_PASSWORD%5D=$DB_PASS&zcinst%5BDB_DATABASE%5D=$DB_NAME&zcinst%5BSQL_CACHE_METHOD%5D=none"
-$CURL "${URL}config_checkup&action=write"
+
+$CURL "${URL}system_setup" --data "lng=en_us&adminDir=admin&btnsubmit=Continue"
+$CURL "${URL}database" --data "action=process&lang=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1m&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT"
 
 ## fix db password - weird bug!
-#CONF=$WEBROOT/includes/configure.php 
-#sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
-#CONF=$WEBROOT/admin/includes/configure.php 
-#sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
+CONF=$WEBROOT/includes/configure.php 
+sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
+CONF=$WEBROOT/admin/includes/configure.php 
+sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
 
-$CURL "${URL}store_setup" --data "store_name=TurnKey+ZenCart&store_owner=Admin&store_owner_email=$EMAIL&store_country=223&store_zone=0&store_address=Store+Name%0D%0A++Address%0D%0A++Country%0D%0A++Phone&store_default_language=en&store_default_currency=USD&demo_install=true&submit=Save+Store+Settings&zcinst%5Blanguage%5D=english"
-$CURL "${URL}admin_setup" --data "admin_username=$ADMIN_NAME&admin_pass=${ADMIN_PASS}1&admin_pass_confirm=${ADMIN_PASS}1&admin_email=$EMAIL&check_for_updates=0&submit=Save+Admin+Settings"
-$CURL "${URL}finished"
+DATABASE_DATA="action=process&lang=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1m&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT&db_host=localhost&db_user=${DB_USER}&db_password=${DB_PASS}&db_name=${DB_NAME}&db_charset=utf8&db_prefix=${DB_PREFIX}&sql_cache_method=none&changeDir=0&adminNewDir=admin"
+
+$CURL "http://127.0.0.1/zc_install/ajaxTestDBConnection.php" --data "$DATABASE_DATA"
+$CURL "http://127.0.0.1/zc_install/ajaxLoadMainSql.php" --data "$DATABASE_DATA"
+$CURL "http://127.0.0.1/zc_install/ajaxAdminSetup.php" --data "$DATABASE_DATA"
+
+$CURL "${URL}admin_setup" --data "action=process&lang=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1m&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT&db_host=localhost&db_user=${DB_USER}&db_password=${DB_PASS}&db_name=${DB_NAME}&db_charset=utf8&db_prefix=${DB_PREFIX}&sql_cache_method=none&changeDir=0&adminNewDir=admin"
+
+$CURL "${URL}completion" --data "action=process&lang=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1m&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT&db_host=localhost&db_user=${DB_USER}&db_password=${DB_PASS}&db_name=${DB_NAME}&db_charset=utf8&db_prefix=${DB_PREFIX}&sql_cache_method=none&changeDir=0&adminNewDir=admin&admin_user=admin&admin_email=$EMAIL&admin_email2=$EMAIL&admin_password=turnkey&admin_directory=admin&btnsubmit=Continue"
+
+
+
 
 rm -f /tmp/cookie
 rm -rf $WEBROOT/zc_install
@@ -83,13 +90,13 @@ rm -rf $WEBROOT/zc_install
 # set admin password (installer requires number)
 SALT="1a"
 HASH=$(echo -n ${SALT}${ADMIN_PASS} | md5sum | cut -d " " -f 1)
-$MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET admin_pass=\"${HASH}:${SALT}\" WHERE admin_name=\"admin\";"
+$MYSQL_BATCH --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET admin_pass=\"${HASH}:${SALT}\" WHERE admin_name=\"admin\";"
 
 # perform tweaks so user isn't asked to reset password
 DATE=$(date +"%Y-%m-%d %H:%M:%S")
-$MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET pwd_last_change_date=\"$DATE\" WHERE admin_name=\"admin\";"
-$MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET last_login_date=\"$DATE\" WHERE admin_name=\"admin\";"
-$MYSQL_BATCH --execute "UPDATE $DB_NAME.admin SET reset_token=\"\" WHERE admin_name=\"admin\";"
+$MYSQL_BATCH --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET pwd_last_change_date=\"$DATE\" WHERE admin_name=\"admin\";"
+$MYSQL_BATCH --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET last_login_date=\"$DATE\" WHERE admin_name=\"admin\";"
+$MYSQL_BATCH --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET reset_token=\"\" WHERE admin_name=\"admin\";"
 
 # secure sensitive files
 chmod 640 $WEBROOT/includes/configure.php 
