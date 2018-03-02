@@ -107,6 +107,14 @@ def main():
     system("sed -i \"s|'HTTP_CATALOG_SERVER.*|'HTTP_CATALOG_SERVER', 'http://%s');|\" %s" % (domain, conf))
     system("sed -i \"s|'HTTPS_CATALOG_SERVER.*|'HTTPS_CATALOG_SERVER', 'https://%s');|\" %s" % (domain, conf))
 
+    htaccess_rules = "######### Turnkey overlay: redirect to domain ######### \n" 
+    htaccess_rules = htaccess_rules + "RewriteEngine On \n" 
+    htaccess_rules = htaccess_rules + "RewriteCond %{HTTP_HOST} !.*" + domain.replace('https://', '').replace('http://','').replace('.','\\.').replace('/','') + "$ [NC] \n"
+    htaccess_rules = htaccess_rules + "RewriteRule ^(.*)$ http://" + domain + "$1 [R=301,L] \n"
+    htaccess_rules = htaccess_rules + "####################################################### \n\n"
+
+    with open('/var/www/zencart/.htaccess','w') as f:
+        f.write(htaccess_rules)
 
 if __name__ == "__main__":
     main()
