@@ -26,7 +26,8 @@ Credentials (passwords set at first boot)
 
 Administrator login is found at `12.34.56.789/manage/index.php`_
 
--  Webmin, SSH, MySQL, Adminer: username **root**
+-  Webmin, SSH, MySQL: username **root**
+-  Adminer: username **adminer**
 -  Zen Cart: username **admin**
 
 
