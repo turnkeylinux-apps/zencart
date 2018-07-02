@@ -1,5 +1,7 @@
 turnkey-zencart-15.0 (1) turnkey; urgency=low
 
+  * Updated Zencart to 1.5.5f
+
   * Install Adminer directly from stretch/main repo
 
   * Replace MySQL with MariaDB
@@ -7,7 +9,7 @@ turnkey-zencart-15.0 (1) turnkey; urgency=low
   * Note: Please refer to turnkey-core's changelog for changes common to all
     appliances. Here we only describe changes specific to this appliance.
 
- -- Stefan Davis <stefan@turnkeylinux.org>  Tue, 09 Jan 2018 00:18:05 +1100
+ -- Stefan Davis <stefan@turnkeylinux.org>  Mon, 02 Jul 2018 10:07:08 +1000
 
 turnkey-zencart-14.2 (1) turnkey; urgency=low
 
