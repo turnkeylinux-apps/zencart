@@ -14,6 +14,10 @@ and on top of that:
    
    - Installed from upstream source code to /var/www/zencart
 
+     **Security note**: Updates to Zen Cart may require supervision so
+     they **ARE NOT** configured to install automatically. See `Zen Cart
+     documentation`_ for upgrading.
+
 - SSL support out of the box.
 - `Adminer`_ administration frontend for MySQL (listening on port
   12322 - uses SSL).
@@ -31,6 +35,7 @@ Administrator login is found at `12.34.56.789/manage/index.php`_
 -  Zen Cart: username **admin**
 
 
-.. _Zen Cart: http://www.zen-cart.com/
+.. _Zen Cart: https://www.zen-cart.com/
 .. _TurnKey Core: https://www.turnkeylinux.org/core
-.. _Adminer: http://www.adminer.org/
+.. _Zen Cart documentation: https://www.zen-cart.com/content.php?148
+.. _Adminer: https://www.adminer.org/
