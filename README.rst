@@ -28,7 +28,7 @@ and on top of that:
 Credentials (passwords set at first boot)
 -------------------------------------------
 
-Administrator login is found at `12.34.56.789/manage/index.php`_
+Administrator login is found at https://YOUR_DOMAIN_DOT_COM/manage/index.php
 
 -  Webmin, SSH, MySQL: username **root**
 -  Adminer: username **adminer**
