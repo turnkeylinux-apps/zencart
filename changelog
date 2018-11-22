@@ -1,3 +1,10 @@
+turnkey-zencart-15.1 (1) turnkey; urgency=low
+
+  * Rebuild to resolve inadvertent removal of mariadb during sec-updates
+    - part of #1246.
+
+ -- Jeremy Davis <jeremy@turnkeylinux.org>  Thu, 22 Nov 2018 16:08:05 +1100
+
 turnkey-zencart-15.0 (1) turnkey; urgency=low
 
   * Updated Zencart to 1.5.5f
