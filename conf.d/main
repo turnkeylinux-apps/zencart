@@ -34,7 +34,7 @@ chown www-data:www-data $WEBROOT/includes/configure.php
 chown www-data:www-data $WEBROOT/admin/includes/configure.php 
 
 # tweak php.ini
-PHPINI=/etc/php/7.0/apache2/php.ini
+PHPINI=/etc/php/7.3/apache2/php.ini
 sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
 
 # configure apache
