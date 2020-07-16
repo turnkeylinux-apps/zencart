@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """Set ZenCart admin password, email and domain to serve
 
 Option:
@@ -20,13 +20,13 @@ from datetime import datetime
 
 from dialog_wrapper import Dialog
 from mysqlconf import MySQL
-from executil import system
+import subprocess
 
 def usage(s=None):
     if s:
-        print >> sys.stderr, "Error:", s
-    print >> sys.stderr, "Syntax: %s [options]" % sys.argv[0]
-    print >> sys.stderr, __doc__
+        print("Error:", s, file=sys.stderr)
+    print("Syntax: %s [options]" % sys.argv[0], file=sys.stderr)
+    print(__doc__, file=sys.stderr)
     sys.exit(1)
 
 DEFAULT_DOMAIN="www.example.com"
@@ -35,7 +35,7 @@ def main():
     try:
         opts, args = getopt.gnu_getopt(sys.argv[1:], "h",
                                        ['help', 'pass=', 'email=', 'domain='])
-    except getopt.GetoptError, e:
+    except getopt.GetoptError as e:
         usage(e)
 
     email = ""
@@ -82,30 +82,30 @@ def main():
 
     inithooks_cache.write('APP_DOMAIN', domain)
 
-    salt = "".join(random.choice(string.letters) for line in range(2))
-    hashpass = ":".join([hashlib.md5(salt + password).hexdigest(), salt])
+    salt = "".join(random.choice(string.ascii_letters) for line in range(2))
+    hashpass = ":".join([hashlib.md5((salt + password).encode('utf8')).hexdigest(), salt])
 
     m = MySQL()
-    m.execute('UPDATE zencart.zen_admin SET admin_pass=\"%s\" WHERE admin_name=\"admin\";' % hashpass)
-    m.execute('UPDATE zencart.zen_admin SET admin_email=\"%s\" WHERE admin_name=\"admin\";' % email)
+    m.execute('UPDATE zencart.zen_admin SET admin_pass=%s WHERE admin_name=\"admin\";', (hashpass,))
+    m.execute('UPDATE zencart.zen_admin SET admin_email=%s WHERE admin_name=\"admin\";', (email,))
 
     # perform tweaks so user isn't asked to reset password
     now = datetime.now()
     date = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    m.execute('UPDATE zencart.zen_admin SET pwd_last_change_date=\"%s\" WHERE admin_name=\"admin\";' % date)
-    m.execute('UPDATE zencart.zen_admin SET last_login_date=\"%s\" WHERE admin_name=\"admin\";' % date)
+    m.execute('UPDATE zencart.zen_admin SET pwd_last_change_date=%s WHERE admin_name=\"admin\";', (date,))
+    m.execute('UPDATE zencart.zen_admin SET last_login_date=%s WHERE admin_name=\"admin\";', (date,))
 
     # set domain
     conf = "/var/www/zencart/includes/configure.php"
-    system("sed -i \"s|'HTTP_SERVER.*|'HTTP_SERVER', 'http://%s');|\" %s" % (domain, conf))
-    system("sed -i \"s|'HTTPS_SERVER.*|'HTTPS_SERVER', 'https://%s');|\" %s" % (domain, conf))
+    subprocess.run(["sed", "-i", "s|'HTTP_SERVER.*|'HTTP_SERVER', 'http://%s');|" % domain, conf])
+    subprocess.run(["sed", "-i", "s|'HTTPS_SERVER.*|'HTTPS_SERVER', 'https://%s');|" % domain, conf])
 
     conf = "/var/www/zencart/manage/includes/configure.php"
-    system("sed -i \"s|'HTTP_SERVER.*|'HTTP_SERVER', 'http://%s');|\" %s" % (domain, conf))
-    system("sed -i \"s|'HTTPS_SERVER.*|'HTTPS_SERVER', 'https://%s');|\" %s" % (domain, conf))
-    system("sed -i \"s|'HTTP_CATALOG_SERVER.*|'HTTP_CATALOG_SERVER', 'http://%s');|\" %s" % (domain, conf))
-    system("sed -i \"s|'HTTPS_CATALOG_SERVER.*|'HTTPS_CATALOG_SERVER', 'https://%s');|\" %s" % (domain, conf))
+    subprocess.run(["sed", "-i", "s|'HTTP_SERVER.*|'HTTP_SERVER', 'http://%s');|" % domain, conf])
+    subprocess.run(["sed", "-i", "s|'HTTPS_SERVER.*|'HTTPS_SERVER', 'https://%s');|" % domain, conf])
+    subprocess.run(["sed", "-i", "s|'HTTP_CATALOG_SERVER.*|'HTTP_CATALOG_SERVER', 'http://%s');|" % domain, conf])
+    subprocess.run(["sed", "-i", "s|'HTTPS_CATALOG_SERVER.*|'HTTPS_CATALOG_SERVER', 'https://%s');|" % domain, conf])
 
     htaccess_rules = "######### Turnkey overlay: redirect to domain ######### \n" 
     htaccess_rules = htaccess_rules + "RewriteEngine On \n" 
