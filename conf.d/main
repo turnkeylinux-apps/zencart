@@ -61,9 +61,8 @@ ZC_CACHE=$(echo $WEBROOT/cache | sed "s/\//%2F/g")
 URL="http://127.0.0.1/zc_install/index.php?main_page="
 CURL="curl -c /tmp/cookie -b /tmp/cookie"
 
-
 $CURL "${URL}system_setup" --data "lng=en_us&adminDir=admin&btnsubmit=Continue"
-$CURL "${URL}database" --data "action=process&lang=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1m&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT"
+$CURL "${URL}database" --data "action=process&lng=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT"
 
 ## fix db password - weird bug!
 CONF=$WEBROOT/includes/configure.php 
