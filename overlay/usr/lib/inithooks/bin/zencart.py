@@ -11,14 +11,14 @@ Option:
 import re
 import sys
 import getopt
-import inithooks_cache
+from libinithooks import inithooks_cache
 
 import string
 import random
 import hashlib
 from datetime import datetime
 
-from dialog_wrapper import Dialog
+from libinithooks.dialog_wrapper import Dialog
 from mysqlconf import MySQL
 import subprocess
 
