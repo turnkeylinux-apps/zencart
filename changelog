@@ -1,6 +1,6 @@
 turnkey-zencart-17.0 (1) turnkey; urgency=low
 
-  * Install latest version of Zencart 1.5.7c
+  * Install latest version of Zencart 1.5.7d
 
   * Updated all relevant Debian packages to Bullseye/11 versions; including
     PHP 7.4.
@@ -8,7 +8,7 @@ turnkey-zencart-17.0 (1) turnkey; urgency=low
   * Note: Please refer to turnkey-core's 16.1 changelog for changes common to all
     appliances. Here we only describe changes specific to this appliance.
 
- -- Stefan Davis <stefan@turnkeylinux.org>  Tue, 07 Dec 2021 05:12:18 +0000
+ -- Stefan Davis <stefan@turnkeylinux.org>  Mon, 19 Sep 2022 22:06:11 +0000
 
 turnkey-zencart-16.1 (1) turnkey; urgency=low
 
@@ -170,4 +170,3 @@ turnkey-zencart-12.0 (1) turnkey; urgency=low
     appliances. Here we only describe changes specific to this appliance.
 
  -- Alon Swartz <alon@turnkeylinux.org>  Wed, 01 Aug 2012 08:00:00 +0200
-
