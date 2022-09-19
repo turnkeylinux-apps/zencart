@@ -14,9 +14,9 @@ SRC=/usr/local/src
 WEBROOT=/var/www/zencart
 
 # unpack and configure
-unzip $SRC/zen-cart-*.zip -d $(dirname $WEBROOT)
-mv $(dirname $WEBROOT)/zen-cart-* $WEBROOT
-rm $SRC/zen-cart-*.zip
+unzip $SRC/*.zip -d $(dirname $WEBROOT)
+mv $(dirname $WEBROOT)/zencart-* $WEBROOT
+rm $SRC/*.zip
 chown -R root:root $WEBROOT
 chown -R www-data:www-data $WEBROOT/pub
 chown -R www-data:www-data $WEBROOT/media
