@@ -1,3 +1,9 @@
+turnkey-zencart-18.0 (1) turnkey; urgency=low
+
+  * Install latest version of Zencart 1.5.8a
+
+ -- Stefan Davis <stefan@turnkeylinux.org>  Thu, 11 Jan 2024 21:32:12 +0000
+
 turnkey-zencart-17.1 (1) turnkey; urgency=low
 
   * Updated all Debian packages to latest.

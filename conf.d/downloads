@@ -5,7 +5,7 @@ dl() {
     cd $2; curl -L -f -O $PROXY $1; cd -
 }
 
-VERSION="v1.5.7d"
+VERSION="v1.5.8a"
 URL="https://github.com/zencart/zencart/archive/refs/tags/$VERSION.zip"
 
 dl $URL /usr/local/src
