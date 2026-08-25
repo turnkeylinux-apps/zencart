@@ -1,12 +1,17 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
-dl() {
-    [ "$FAB_HTTP_PROXY" ] && PROXY="--proxy $FAB_HTTP_PROXY"
-    cd $2; curl -L -f -O $PROXY $1; cd -
-}
+set -x
 
-VERSION=$(gh_releases zencart/zencart | grep -v 'alpha' | tail -1)
-URL="https://github.com/zencart/zencart/archive/refs/tags/$VERSION.zip"
+SRC=/usr/local/src
+VERSION=v2.2.2
+ARCHIVE=zencart-$VERSION.zip
+ARCHIVE_SHA256=5fdb86e97460975b5f7a5e25affd3616b2470b96001aa3f1192bd0cc4c0efadc
+URL=https://github.com/zencart/zencart/archive/refs/tags/$VERSION.zip
 
-dl $URL /usr/local/src
+proxy_args=()
+if [ -n "${FAB_HTTP_PROXY:-}" ]; then
+    proxy_args=(--proxy "$FAB_HTTP_PROXY")
+fi
 
+curl -LfsS "${proxy_args[@]}" "$URL" -o "$SRC/$ARCHIVE"
+printf '%s  %s\n' "$ARCHIVE_SHA256" "$SRC/$ARCHIVE" | sha256sum -c -

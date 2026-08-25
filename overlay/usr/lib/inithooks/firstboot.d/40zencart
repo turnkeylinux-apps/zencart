@@ -3,6 +3,5 @@
 
 . /etc/default/inithooks
 
-[ -e $INITHOOKS_CONF ] && . $INITHOOKS_CONF
+[ -e "$INITHOOKS_CONF" ] && . "$INITHOOKS_CONF"
 $INITHOOKS_PATH/bin/zencart.py --pass="$APP_PASS" --email="$APP_EMAIL" --domain="$APP_DOMAIN"
-

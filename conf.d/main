@@ -1,110 +1,152 @@
-#!/bin/sh -ex
+#!/bin/bash -e
+
+set -o pipefail
+set -x
 
 DB_NAME=zencart
 DB_USER=zencart
-DB_PASS=$(mcookie)
 DB_PREFIX=zen_
 
 ADMIN_NAME=admin
 ADMIN_PASS=turnkey
 ADMIN_MAIL=admin@example.com
-DOMAIN=www.example.com
 
 SRC=/usr/local/src
 WEBROOT=/var/www/zencart
+VERSION=v2.2.2
+TAG_COMMIT=63cf0ec3324d49767d25a07d168cdecb829e4d2a
+ARCHIVE_SHA256=5fdb86e97460975b5f7a5e25affd3616b2470b96001aa3f1192bd0cc4c0efadc
 
-# unpack and configure
-unzip $SRC/*.zip -d $(dirname $WEBROOT)
-mv $(dirname $WEBROOT)/zencart-* $WEBROOT
-rm $SRC/*.zip
-chown -R root:root $WEBROOT
-chown -R www-data:www-data $WEBROOT/pub
-chown -R www-data:www-data $WEBROOT/media
-chown -R www-data:www-data $WEBROOT/cache
-chown -R www-data:www-data $WEBROOT/images
-chown -R www-data:www-data $WEBROOT/admin/backups
-chown -R www-data:www-data $WEBROOT/admin/images/graphs
-chown -R www-data:www-data $WEBROOT/includes/languages/english/html_includes
-chown -R www-data:www-data $WEBROOT/logs
+unzip -q "$SRC/zencart-$VERSION.zip" -d "$(dirname "$WEBROOT")"
+mv "$(dirname "$WEBROOT")/zencart-${VERSION#v}" "$WEBROOT"
+rm -f "$SRC/zencart-$VERSION.zip"
 
-mv $WEBROOT/includes/dist-configure.php $WEBROOT/includes/configure.php 
-mv $WEBROOT/admin/includes/dist-configure.php $WEBROOT/admin/includes/configure.php 
+grep -qx "define('PROJECT_VERSION_MAJOR', '2');" "$WEBROOT/includes/version.php"
+grep -qx "define('PROJECT_VERSION_MINOR', '2.2');" "$WEBROOT/includes/version.php"
 
-chown www-data:www-data $WEBROOT/includes/configure.php 
-chown www-data:www-data $WEBROOT/admin/includes/configure.php 
+install -d -m 0755 /usr/local/share/turnkey-zencart
+cat > /usr/local/share/turnkey-zencart/source <<EOF
+version=$VERSION
+tag_commit=$TAG_COMMIT
+archive_sha256=$ARCHIVE_SHA256
+channel=official Zen Cart v2.2 patch releases
+EOF
 
-# tweak php.ini
-PHPINI=/etc/php/?.?/apache2/php.ini
-sed -i "s|^;date.timezone.*|date.timezone = \"UTC\"|" $PHPINI
+mv "$WEBROOT/includes/dist-configure.php" "$WEBROOT/includes/configure.php"
+mv "$WEBROOT/admin/includes/dist-configure.php" "$WEBROOT/admin/includes/configure.php"
+printf '\ndefine(\x27DEVELOPER_MODE\x27, true);\n' >> "$WEBROOT/zc_install/includes/localConfig.php"
 
-# configure apache
+for path in \
+    pub media cache images download logs admin/backups admin/images/graphs \
+    includes/languages/english/html_includes; do
+    chown -R www-data:www-data "$WEBROOT/$path"
+done
+chown www-data:www-data \
+    "$WEBROOT/includes/configure.php" \
+    "$WEBROOT/admin/includes/configure.php"
+
+for php_ini in /etc/php/*/apache2/php.ini; do
+    sed -i 's|^;date.timezone.*|date.timezone = "UTC"|' "$php_ini"
+done
+
 a2dissite 000-default
 a2ensite zencart
 a2enmod rewrite
 
-# start services
 service mysql start
 service apache2 start
+mysqladmin create "$DB_NAME"
 
-# setup the database
-MYSQL_BATCH="mysql --user=root --password=$MYSQL_PASS --batch"
-MYSQL_ADMIN="mysqladmin --user=root --password=$MYSQL_PASS"
+set +x
+DB_PASS=$(mcookie)
+mysql --batch --execute "CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS'; GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost'; FLUSH PRIVILEGES;"
 
-$MYSQL_ADMIN create $DB_NAME
-$MYSQL_BATCH --execute "grant all privileges on $DB_NAME.* to $DB_USER@localhost identified by '$DB_PASS'; flush privileges;"
+cookie=$(mktemp /tmp/zencart-install-cookie.XXXXXX)
+trap 'rm -f "$cookie"' EXIT
+install_url=http://127.0.0.1/zc_install
+curl_session=(curl -fsS -c "$cookie" -b "$cookie")
+system_args=(
+    --data-urlencode lng=en_us
+    --data-urlencode adminDir=admin
+    --data-urlencode agreeLicense=on
+    --data-urlencode http_server_catalog=http://127.0.0.1
+    --data-urlencode https_server_catalog=https://127.0.0.1
+    --data-urlencode enable_ssl_catalog=true
+    --data-urlencode dir_ws_http_catalog=/
+    --data-urlencode dir_ws_https_catalog=/
+    --data-urlencode http_url_catalog=http://127.0.0.1/
+    --data-urlencode https_url_catalog=https://127.0.0.1/
+    --data-urlencode detected_http_server_catalog=http://127.0.0.1
+    --data-urlencode detected_https_server_catalog=https://127.0.0.1
+    --data-urlencode "physical_path=$WEBROOT/"
+    --data-urlencode http_server_admin=https://127.0.0.1
+    --data-urlencode installer_method=TurnKey-Linux-appliance
+)
+database_args=(
+    --data-urlencode db_type=mysql
+    --data-urlencode db_host=localhost
+    --data-urlencode "db_user=$DB_USER"
+    --data-urlencode "db_password=$DB_PASS"
+    --data-urlencode "db_name=$DB_NAME"
+    --data-urlencode db_charset=utf8mb4
+    --data-urlencode "db_prefix=$DB_PREFIX"
+    --data-urlencode sql_cache_method=none
+)
 
-# curl based install
-EMAIL=$(echo $ADMIN_MAIL | sed s/@/%40/)
-ZC_ROOT=$(echo $WEBROOT | sed "s/\//%2F/g")
-ZC_CACHE=$(echo $WEBROOT/cache | sed "s/\//%2F/g")
+"${curl_session[@]}" "${system_args[@]}" "$install_url/index.php?main_page=database" >/dev/null
 
-URL="http://127.0.0.1/zc_install/index.php?main_page="
-CURL="curl -c /tmp/cookie -b /tmp/cookie"
+db_test=$("${curl_session[@]}" "${database_args[@]}" "$install_url/ajaxTestDBConnection.php")
+printf '%s' "$db_test" | jq -e '.error == false' >/dev/null
 
-$CURL "${URL}system_setup" --data "lng=en_us&adminDir=admin&btnsubmit=Continue"
-$CURL "${URL}database" --data "action=process&lng=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT"
+db_load=$("${curl_session[@]}" "${database_args[@]}" "$install_url/ajaxLoadMainSql.php")
+printf '%s' "$db_load" | jq -e '.error == false' >/dev/null
 
-## fix db password - weird bug!
-CONF=$WEBROOT/includes/configure.php 
-sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
-CONF=$WEBROOT/admin/includes/configure.php 
-sed -i "s|DB_SERVER_PASSWORD.*|DB_SERVER_PASSWORD', '$DB_PASS');|" $CONF
+admin_setup=$("${curl_session[@]}" \
+    --data-urlencode admin_user=$ADMIN_NAME \
+    --data-urlencode admin_email=$ADMIN_MAIL \
+    --data-urlencode admin_email2=$ADMIN_MAIL \
+    --data-urlencode adminDir=admin \
+    "$install_url/ajaxAdminSetup.php")
+printf '%s' "$admin_setup" | jq -e '.error == false and .adminDir == "admin"' >/dev/null
 
-DATABASE_DATA="action=process&lang=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1m&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT&db_host=localhost&db_user=${DB_USER}&db_password=${DB_PASS}&db_name=${DB_NAME}&db_charset=utf8&db_prefix=${DB_PREFIX}&sql_cache_method=none&changeDir=0&adminNewDir=admin"
+"${curl_session[@]}" \
+    "${system_args[@]}" "${database_args[@]}" \
+    --data-urlencode changedDir=0 \
+    --data-urlencode adminNewDir=admin \
+    "$install_url/index.php?main_page=admin_setup" >/dev/null
 
-$CURL "http://127.0.0.1/zc_install/ajaxTestDBConnection.php" --data "$DATABASE_DATA"
-$CURL "http://127.0.0.1/zc_install/ajaxLoadMainSql.php" --data "$DATABASE_DATA"
-$CURL "http://127.0.0.1/zc_install/ajaxAdminSetup.php" --data "$DATABASE_DATA"
+"${curl_session[@]}" \
+    "${system_args[@]}" "${database_args[@]}" \
+    --data-urlencode admin_user=$ADMIN_NAME \
+    --data-urlencode admin_email=$ADMIN_MAIL \
+    --data-urlencode admin_email2=$ADMIN_MAIL \
+    --data-urlencode admin_password=$ADMIN_PASS \
+    --data-urlencode admin_directory=admin \
+    "$install_url/index.php?main_page=completion" >/dev/null
 
-$CURL "${URL}admin_setup" --data "action=process&lang=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1m&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT&db_host=localhost&db_user=${DB_USER}&db_password=${DB_PASS}&db_name=${DB_NAME}&db_charset=utf8&db_prefix=${DB_PREFIX}&sql_cache_method=none&changeDir=0&adminNewDir=admin"
+ADMIN_HASH=$(php -r 'echo password_hash($argv[1], PASSWORD_DEFAULT);' "$ADMIN_PASS")
+DATE=$(date '+%Y-%m-%d %H:%M:%S')
+mysql --batch --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET admin_pass='$ADMIN_HASH', pwd_last_change_date='$DATE', last_login_date='$DATE', reset_token='' WHERE admin_name='$ADMIN_NAME';"
+unset ADMIN_HASH DB_PASS
+rm -f "$cookie"
+trap - EXIT
+set -x
 
-$CURL "${URL}completion" --data "action=process&lang=en_us&dir_ws_http_catalog=%2F%2F&dir_ws_https_catalog=%2F%2F&detected_detected_http_server_catalog=http%3A%2F%2F127.0.0.1&detected_detected_https_server_catalog=https%3A%2F%2F127.0.0.1&adminDir=admin&db_type=mysql&agreeLicense=on&http_server_admin=http%3A%2F%2F127.0.0.1&enable_ssl_catalog=true&http_server_catalog=http%3A%2F%2F127.0.0.1&http_url_catalog=http%3A%2F%2F127.0.0.1%2F&https_server_catalog=https%3A%2F%2F127.0.0.1m&https_url_catalog=https%3A%2F%2F127.0.0.1%2F&physical_path=$ZC_ROOT&db_host=localhost&db_user=${DB_USER}&db_password=${DB_PASS}&db_name=${DB_NAME}&db_charset=utf8&db_prefix=${DB_PREFIX}&sql_cache_method=none&changeDir=0&adminNewDir=admin&admin_user=admin&admin_email=$EMAIL&admin_email2=$EMAIL&admin_password=turnkey&admin_directory=admin&btnsubmit=Continue"
+rm -rf "$WEBROOT/zc_install"
+mv "$WEBROOT/admin" "$WEBROOT/manage"
 
+chown -R root:root "$WEBROOT"
+for path in \
+    pub media cache images download logs manage/backups manage/images/graphs \
+    includes/languages/english/html_includes; do
+    chown -R www-data:www-data "$WEBROOT/$path"
+done
+chown root:www-data \
+    "$WEBROOT/includes/configure.php" \
+    "$WEBROOT/manage/includes/configure.php"
+chmod 0640 \
+    "$WEBROOT/includes/configure.php" \
+    "$WEBROOT/manage/includes/configure.php"
 
-
-
-rm -f /tmp/cookie
-rm -rf $WEBROOT/zc_install
-
-# set admin password (installer requires number)
-SALT="1a"
-HASH=$(echo -n ${SALT}${ADMIN_PASS} | md5sum | cut -d " " -f 1)
-$MYSQL_BATCH --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET admin_pass=\"${HASH}:${SALT}\" WHERE admin_name=\"admin\";"
-
-# perform tweaks so user isn't asked to reset password
-DATE=$(date +"%Y-%m-%d %H:%M:%S")
-$MYSQL_BATCH --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET pwd_last_change_date=\"$DATE\" WHERE admin_name=\"admin\";"
-$MYSQL_BATCH --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET last_login_date=\"$DATE\" WHERE admin_name=\"admin\";"
-$MYSQL_BATCH --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET reset_token=\"\" WHERE admin_name=\"admin\";"
-
-# secure sensitive files
-chmod 640 $WEBROOT/includes/configure.php 
-chmod 640 $WEBROOT/admin/includes/configure.php 
-
-# stupid security through obscurity
-mv $WEBROOT/admin $WEBROOT/manage
-
-# stop services
 service mysql stop
 service apache2 stop
-

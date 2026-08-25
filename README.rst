@@ -10,13 +10,18 @@ needs of merchants and shoppers first.
 This appliance includes all the standard features in `TurnKey Core`_,
 and on top of that:
 
-- Zen Cart configurations:
+- Zen Cart configuration:
    
-   - Installed from upstream source code to /var/www/zencart
+   - Pinned official Zen Cart v2.2.2 source installed in
+     ``/var/www/zencart``.
 
-     **Security note**: Updates to Zen Cart may require supervision so
-     they **ARE NOT** configured to install automatically. See `Zen Cart
-     documentation`_ for upgrading.
+   - ``turnkey-zencart-update`` checks and applies verified Zen Cart v2.2
+     patch releases while preserving the store configuration, merchant data,
+     and renamed administrator directory.
+
+     **Security note**: Major and minor Zen Cart upgrades require a supervised
+     upgrade. See the `Zen Cart documentation`_ before changing release
+     series.
 
 - SSL support out of the box.
 - `Adminer`_ administration frontend for MySQL (listening on port

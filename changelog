@@ -1,3 +1,17 @@
+turnkey-zencart-19.0 (1) turnkey; urgency=low
+
+  * Port the appliance to Debian 13 (Trixie).
+
+  * Install pinned official Zen Cart v2.2.2 source with its published archive
+    digest.
+
+  * Add a supervised updater for verified Zen Cart v2.2 patch releases.
+
+  * Preserve first-boot administrator configuration, the storefront,
+    MariaDB, Apache, and local application mail behavior.
+
+ -- TurnKey Linux release engineering <release-engineering@turnkeylinux.org>  Tue, 25 Aug 2026 22:00:00 +0000
+
 turnkey-zencart-18.0 (1) turnkey; urgency=low
 
   * Install latest version of Zencart 1.5.8a

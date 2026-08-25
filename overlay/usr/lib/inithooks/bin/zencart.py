@@ -8,14 +8,10 @@ Option:
                 DEFAULT=www.example.com
 """
 
-import re
 import sys
 import getopt
 from libinithooks import inithooks_cache
 
-import string
-import random
-import hashlib
 from datetime import datetime
 
 from libinithooks.dialog_wrapper import Dialog
@@ -82,8 +78,12 @@ def main():
 
     inithooks_cache.write('APP_DOMAIN', domain)
 
-    salt = "".join(random.choice(string.ascii_letters) for line in range(2))
-    hashpass = ":".join([hashlib.md5((salt + password).encode('utf8')).hexdigest(), salt])
+    hashpass = subprocess.run(
+        ["php", "-r", "echo password_hash($argv[1], PASSWORD_DEFAULT);", password],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
 
     m = MySQL()
     m.execute('UPDATE zencart.zen_admin SET admin_pass=%s WHERE admin_name=\"admin\";', (hashpass,))
@@ -98,19 +98,18 @@ def main():
 
     # set domain
     conf = "/var/www/zencart/includes/configure.php"
-    subprocess.run(["sed", "-i", "s|'HTTP_SERVER.*|'HTTP_SERVER', 'http://%s');|" % domain, conf])
-    subprocess.run(["sed", "-i", "s|'HTTPS_SERVER.*|'HTTPS_SERVER', 'https://%s');|" % domain, conf])
+    subprocess.run(["sed", "-i", "s|'HTTP_SERVER.*|'HTTP_SERVER', 'http://%s');|" % domain, conf], check=True)
+    subprocess.run(["sed", "-i", "s|'HTTPS_SERVER.*|'HTTPS_SERVER', 'https://%s');|" % domain, conf], check=True)
 
     conf = "/var/www/zencart/manage/includes/configure.php"
-    subprocess.run(["sed", "-i", "s|'HTTP_SERVER.*|'HTTP_SERVER', 'http://%s');|" % domain, conf])
-    subprocess.run(["sed", "-i", "s|'HTTPS_SERVER.*|'HTTPS_SERVER', 'https://%s');|" % domain, conf])
-    subprocess.run(["sed", "-i", "s|'HTTP_CATALOG_SERVER.*|'HTTP_CATALOG_SERVER', 'http://%s');|" % domain, conf])
-    subprocess.run(["sed", "-i", "s|'HTTPS_CATALOG_SERVER.*|'HTTPS_CATALOG_SERVER', 'https://%s');|" % domain, conf])
+    subprocess.run(["sed", "-i", "s|'HTTP_SERVER.*|'HTTP_SERVER', 'https://%s');|" % domain, conf], check=True)
+    subprocess.run(["sed", "-i", "s|'HTTP_CATALOG_SERVER.*|'HTTP_CATALOG_SERVER', 'http://%s');|" % domain, conf], check=True)
+    subprocess.run(["sed", "-i", "s|'HTTPS_CATALOG_SERVER.*|'HTTPS_CATALOG_SERVER', 'https://%s');|" % domain, conf], check=True)
 
     htaccess_rules = "######### Turnkey overlay: redirect to domain ######### \n" 
     htaccess_rules = htaccess_rules + "RewriteEngine On \n" 
     htaccess_rules = htaccess_rules + "RewriteCond %{HTTP_HOST} !.*" + domain.replace('https://', '').replace('http://','').replace('.','\\.').replace('/','') + "$ [NC] \n"
-    htaccess_rules = htaccess_rules + "RewriteRule ^(.*)$ http://" + domain + "$1 [R=301,L] \n"
+    htaccess_rules = htaccess_rules + "RewriteRule ^(.*)$ https://" + domain + "/$1 [R=301,L] \n"
     htaccess_rules = htaccess_rules + "####################################################### \n\n"
 
     with open('/var/www/zencart/.htaccess','w') as f:
@@ -118,4 +117,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
