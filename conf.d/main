@@ -93,14 +93,18 @@ database_args=(
     --data-urlencode sql_cache_method=none
 )
 
+printf 'zencart_install_stage=database-page\n' >&2
 "${curl_session[@]}" "${system_args[@]}" "$install_url/index.php?main_page=database" >/dev/null
 
+printf 'zencart_install_stage=database-check\n' >&2
 db_test=$("${curl_session[@]}" "${database_args[@]}" "$install_url/ajaxTestDBConnection.php")
 printf '%s' "$db_test" | jq -e '.error == false' >/dev/null
 
+printf 'zencart_install_stage=schema-load\n' >&2
 db_load=$("${curl_session[@]}" "${database_args[@]}" "$install_url/ajaxLoadMainSql.php")
 printf '%s' "$db_load" | jq -e '.error == false' >/dev/null
 
+printf 'zencart_install_stage=admin-ajax\n' >&2
 admin_setup=$("${curl_session[@]}" \
     --data-urlencode admin_user=$ADMIN_NAME \
     --data-urlencode admin_email=$ADMIN_MAIL \
@@ -114,12 +118,14 @@ printf '%s' "$admin_setup" | jq -e '
     .changedDir == 0
 ' >/dev/null
 
+printf 'zencart_install_stage=admin-page\n' >&2
 "${curl_session[@]}" \
     "${system_args[@]}" "${database_args[@]}" \
     --data-urlencode changedDir=0 \
     --data-urlencode adminNewDir=admin \
     "$install_url/index.php?main_page=admin_setup" >/dev/null
 
+printf 'zencart_install_stage=completion-page\n' >&2
 "${curl_session[@]}" \
     "${system_args[@]}" "${database_args[@]}" \
     --data-urlencode admin_user=$ADMIN_NAME \
@@ -129,6 +135,7 @@ printf '%s' "$admin_setup" | jq -e '
     --data-urlencode admin_directory=admin \
     "$install_url/index.php?main_page=completion" >/dev/null
 
+printf 'zencart_install_stage=admin-finalization\n' >&2
 ADMIN_HASH=$(php -r 'echo password_hash($argv[1], PASSWORD_DEFAULT);' "$ADMIN_PASS")
 DATE=$(date '+%Y-%m-%d %H:%M:%S')
 mysql --batch --execute "UPDATE $DB_NAME.${DB_PREFIX}admin SET admin_pass='$ADMIN_HASH', pwd_last_change_date='$DATE', last_login_date='$DATE', reset_token='' WHERE admin_name='$ADMIN_NAME';"
