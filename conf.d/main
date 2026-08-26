@@ -127,13 +127,14 @@ printf 'zencart_install_stage=admin-page\n' >&2
 
 printf 'zencart_install_stage=completion-page\n' >&2
 "${curl_session[@]}" \
+    --insecure \
     "${system_args[@]}" "${database_args[@]}" \
     --data-urlencode admin_user=$ADMIN_NAME \
     --data-urlencode admin_email=$ADMIN_MAIL \
     --data-urlencode admin_email2=$ADMIN_MAIL \
     --data-urlencode admin_password=$ADMIN_PASS \
     --data-urlencode admin_directory=admin \
-    "$install_url/index.php?main_page=completion" >/dev/null
+    "https://127.0.0.1/zc_install/index.php?main_page=completion" >/dev/null
 
 printf 'zencart_install_stage=admin-finalization\n' >&2
 ADMIN_HASH=$(php -r 'echo password_hash($argv[1], PASSWORD_DEFAULT);' "$ADMIN_PASS")
