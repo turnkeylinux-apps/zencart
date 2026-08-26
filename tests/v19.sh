@@ -114,7 +114,7 @@ product_id=$(mysql zencart -NBe "SELECT products_id FROM zen_products WHERE prod
 product_page=$("${curl_base[@]}" "$base_url/index.php?main_page=product_info&products_id=$product_id")
 grep -q 'Wave 2 Acceptance Product' <<<"$product_page" || fail "created product could not be read from the storefront"
 
-postconf -h inet_interfaces | grep -qx loopback-only || fail "Postfix is not restricted to loopback"
+postconf -h inet_interfaces | grep -qx localhost || fail "Postfix is not restricted to localhost"
 printf 'Subject: Zen Cart v19 acceptance\n\nLocal application mail check.\n' | timeout 20 /usr/sbin/sendmail root@localhost
 
 update_check=$(turnkey-zencart-update --check)
