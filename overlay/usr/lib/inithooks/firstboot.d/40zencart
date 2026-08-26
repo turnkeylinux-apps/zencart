@@ -5,3 +5,12 @@
 
 [ -e "$INITHOOKS_CONF" ] && . "$INITHOOKS_CONF"
 $INITHOOKS_PATH/bin/zencart.py --pass="$APP_PASS" --email="$APP_EMAIL" --domain="$APP_DOMAIN"
+
+# The MySQL helpers restore MariaDB to the state they observed on entry.  The
+# image build deliberately leaves it stopped, so make the appliance database
+# available after firstboot has completed its credential changes.
+service mariadb start
+
+# The image build also leaves Apache stopped.  Restore the web service after
+# firstboot has finished changing Zen Cart's configuration.
+service apache2 start
