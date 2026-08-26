@@ -44,6 +44,7 @@ done
 chown www-data:www-data \
     "$WEBROOT/includes/configure.php" \
     "$WEBROOT/admin/includes/configure.php"
+chown www-data:www-data "$WEBROOT/zc_install/includes/nginx_conf"
 
 for php_ini in /etc/php/*/apache2/php.ini; do
     sed -i 's|^;date.timezone.*|date.timezone = "UTC"|' "$php_ini"
