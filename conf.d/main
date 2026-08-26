@@ -137,6 +137,11 @@ if ! "${curl_session[@]}" \
         "https://127.0.0.1/zc_install/index.php?main_page=completion" >/dev/null; then
     printf 'zencart_install_stage=completion-page-error-log\n' >&2
     tail -n 80 /var/log/apache2/error.log >&2 || true
+    for log in "$WEBROOT"/logs/zcInstallDEBUG-*.log; do
+        [ -f "$log" ] || continue
+        printf 'zencart_install_php_log=%s\n' "$(basename "$log")" >&2
+        tail -n 80 "$log" >&2 || true
+    done
     exit 22
 fi
 
