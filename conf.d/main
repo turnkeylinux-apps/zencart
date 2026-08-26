@@ -107,7 +107,12 @@ admin_setup=$("${curl_session[@]}" \
     --data-urlencode admin_email2=$ADMIN_MAIL \
     --data-urlencode adminDir=admin \
     "$install_url/ajaxAdminSetup.php")
-printf '%s' "$admin_setup" | jq -e '.error == false and .adminDir == "admin"' >/dev/null
+printf '%s' "$admin_setup" | jq -e '
+    .error != true and
+    .adminDir == "admin" and
+    .adminNewDir == "admin" and
+    .changedDir == 0
+' >/dev/null
 
 "${curl_session[@]}" \
     "${system_args[@]}" "${database_args[@]}" \
