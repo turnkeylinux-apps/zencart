@@ -3,8 +3,15 @@
 set -o pipefail
 
 REPO_URL=https://github.com/zencart/zencart.git
-WEBROOT=/var/www/zencart
-SOURCE_RECORD=/usr/local/share/turnkey-zencart/source
+UPDATE_ROOT=${TKL_ZENCART_UPDATE_ROOT:-}
+case "$UPDATE_ROOT" in
+    "") ;;
+    /*) [ "$UPDATE_ROOT" != / ] || { echo "invalid updater test root" >&2; exit 2; } ;;
+    *) echo "updater test root must be absolute" >&2; exit 2 ;;
+esac
+WEBROOT=$UPDATE_ROOT/var/www/zencart
+SOURCE_RECORD=$UPDATE_ROOT/usr/local/share/turnkey-zencart/source
+CACHE_ROOT=$UPDATE_ROOT/var/cache
 TEMP_DIR=
 
 usage() {
@@ -30,7 +37,7 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 fetch_candidate() {
-    refs=$(git ls-remote --refs --tags "$REPO_URL" 'refs/tags/v2.2.*')
+    refs=$(git -C / ls-remote --tags "$REPO_URL" 'refs/tags/v2.2.*')
     candidate_version=$(printf '%s\n' "$refs" |
         sed -n 's|^[^[:space:]]*[[:space:]]*refs/tags/||p' |
         grep -E '^v2\.2\.[0-9]+$' | sort -V | tail -1)
@@ -38,22 +45,42 @@ fetch_candidate() {
         echo "no official Zen Cart v2.2 patch release found" >&2
         exit 1
     }
-    candidate_commit=$(printf '%s\n' "$refs" |
+    candidate_tag_oid=$(printf '%s\n' "$refs" |
         awk -v ref="refs/tags/$candidate_version" '$2 == ref {print $1}')
+    candidate_commit=$(printf '%s\n' "$refs" |
+        awk -v ref="refs/tags/$candidate_version^{}" '$2 == ref {print $1}')
+    [ -n "$candidate_commit" ] || candidate_commit=$candidate_tag_oid
     printf '%s\n' "$candidate_commit" | grep -Eq '^[0-9a-f]{40}$' || {
         echo "unable to resolve official tag commit for $candidate_version" >&2
         exit 1
     }
 
-    TEMP_DIR=$(mktemp -d /var/cache/turnkey-zencart-update.XXXXXX)
+    [ -d "$CACHE_ROOT" ] || install -d -m 0700 "$CACHE_ROOT"
+    TEMP_DIR=$(mktemp -d "$CACHE_ROOT/turnkey-zencart-update.XXXXXX")
+    candidate_root="$TEMP_DIR/checkout"
+    git init -q "$candidate_root"
+    git -C "$candidate_root" fetch -q --depth=1 --no-tags \
+        "$REPO_URL" "refs/tags/$candidate_version"
+    git -C "$candidate_root" checkout -q --detach FETCH_HEAD
+    candidate_head=$(git -C "$candidate_root" rev-parse --verify HEAD)
+    [ "$candidate_head" = "$candidate_commit" ] || {
+        echo "fetched checkout does not match official tag commit for $candidate_version" >&2
+        exit 1
+    }
+
     candidate_archive="$TEMP_DIR/zencart.zip"
     candidate_url="https://github.com/zencart/zencart/archive/refs/tags/$candidate_version.zip"
     curl -LfsS "$candidate_url" -o "$candidate_archive"
     candidate_sha256=$(sha256sum "$candidate_archive" | awk '{print $1}')
-    candidate_root="$TEMP_DIR/zencart-${candidate_version#v}"
-    unzip -q "$candidate_archive" -d "$TEMP_DIR"
-    [ -f "$candidate_root/includes/version.php" ] || {
+    candidate_archive_root="$TEMP_DIR/archive/zencart-${candidate_version#v}"
+    mkdir "$TEMP_DIR/archive"
+    unzip -q "$candidate_archive" -d "$TEMP_DIR/archive"
+    [ -f "$candidate_archive_root/includes/version.php" ] || {
         echo "candidate archive has an unexpected layout" >&2
+        exit 1
+    }
+    [ -f "$candidate_root/includes/version.php" ] || {
+        echo "candidate checkout has an unexpected layout" >&2
         exit 1
     }
     candidate_runtime=$(php -r 'include $argv[1]; echo PROJECT_VERSION_MAJOR, ".", PROJECT_VERSION_MINOR;' "$candidate_root/includes/version.php")
@@ -130,6 +157,7 @@ if [ "$status" = up-to-date ]; then
 fi
 
 rsync -a \
+    --exclude .git/ \
     --exclude admin/ \
     --exclude zc_install/ \
     --exclude includes/configure.php \
@@ -141,6 +169,7 @@ rsync -a \
     --exclude pub/ \
     "$candidate_root/" "$WEBROOT/"
 rsync -a \
+    --exclude .git/ \
     --exclude includes/configure.php \
     "$candidate_root/admin/" "$WEBROOT/manage/"
 
