@@ -45,7 +45,7 @@ fetch_candidate() {
         exit 1
     }
 
-    TEMP_DIR=$(mktemp -d /var/tmp/turnkey-zencart-update.XXXXXX)
+    TEMP_DIR=$(mktemp -d /var/cache/turnkey-zencart-update.XXXXXX)
     candidate_archive="$TEMP_DIR/zencart.zip"
     candidate_url="https://github.com/zencart/zencart/archive/refs/tags/$candidate_version.zip"
     curl -LfsS "$candidate_url" -o "$candidate_archive"

@@ -61,7 +61,7 @@ set +x
 DB_PASS=$(mcookie)
 mysql --batch --execute "CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS'; GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost'; FLUSH PRIVILEGES;"
 
-cookie=$(mktemp /tmp/zencart-install-cookie.XXXXXX)
+cookie=$(mktemp /run/zencart-install-cookie.XXXXXX)
 trap 'rm -f "$cookie"' EXIT
 install_url=http://127.0.0.1/zc_install
 curl_session=(curl -fsS -c "$cookie" -b "$cookie")
