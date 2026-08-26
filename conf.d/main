@@ -126,15 +126,19 @@ printf 'zencart_install_stage=admin-page\n' >&2
     "$install_url/index.php?main_page=admin_setup" >/dev/null
 
 printf 'zencart_install_stage=completion-page\n' >&2
-"${curl_session[@]}" \
-    --insecure \
-    "${system_args[@]}" "${database_args[@]}" \
-    --data-urlencode admin_user=$ADMIN_NAME \
-    --data-urlencode admin_email=$ADMIN_MAIL \
-    --data-urlencode admin_email2=$ADMIN_MAIL \
-    --data-urlencode admin_password=$ADMIN_PASS \
-    --data-urlencode admin_directory=admin \
-    "https://127.0.0.1/zc_install/index.php?main_page=completion" >/dev/null
+if ! "${curl_session[@]}" \
+        --insecure \
+        "${system_args[@]}" "${database_args[@]}" \
+        --data-urlencode admin_user=$ADMIN_NAME \
+        --data-urlencode admin_email=$ADMIN_MAIL \
+        --data-urlencode admin_email2=$ADMIN_MAIL \
+        --data-urlencode admin_password=$ADMIN_PASS \
+        --data-urlencode admin_directory=admin \
+        "https://127.0.0.1/zc_install/index.php?main_page=completion" >/dev/null; then
+    printf 'zencart_install_stage=completion-page-error-log\n' >&2
+    tail -n 80 /var/log/apache2/error.log >&2 || true
+    exit 22
+fi
 
 printf 'zencart_install_stage=admin-finalization\n' >&2
 ADMIN_HASH=$(php -r 'echo password_hash($argv[1], PASSWORD_DEFAULT);' "$ADMIN_PASS")
