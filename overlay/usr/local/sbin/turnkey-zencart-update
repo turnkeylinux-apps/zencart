@@ -1,0 +1,197 @@
+#!/bin/bash -e
+
+set -o pipefail
+
+REPO_URL=https://github.com/zencart/zencart.git
+UPDATE_ROOT=${TKL_ZENCART_UPDATE_ROOT:-}
+case "$UPDATE_ROOT" in
+    "") ;;
+    /*) [ "$UPDATE_ROOT" != / ] || { echo "invalid updater test root" >&2; exit 2; } ;;
+    *) echo "updater test root must be absolute" >&2; exit 2 ;;
+esac
+WEBROOT=$UPDATE_ROOT/var/www/zencart
+SOURCE_RECORD=$UPDATE_ROOT/usr/local/share/turnkey-zencart/source
+CACHE_ROOT=$UPDATE_ROOT/var/cache
+TEMP_DIR=
+
+usage() {
+    echo "usage: turnkey-zencart-update --check | --apply [--dry-run]" >&2
+    exit 2
+}
+
+record_value() {
+    key=$1
+    value=$(sed -n "s/^${key}=//p" "$SOURCE_RECORD")
+    [ -n "$value" ] || {
+        echo "missing ${key} in ${SOURCE_RECORD}" >&2
+        exit 1
+    }
+    printf '%s\n' "$value"
+}
+
+cleanup() {
+    if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+        rm -rf "$TEMP_DIR"
+    fi
+}
+trap cleanup EXIT HUP INT TERM
+
+fetch_candidate() {
+    refs=$(git -C / ls-remote --tags "$REPO_URL" 'refs/tags/v2.2.*')
+    candidate_version=$(printf '%s\n' "$refs" |
+        sed -n 's|^[^[:space:]]*[[:space:]]*refs/tags/||p' |
+        grep -E '^v2\.2\.[0-9]+$' | sort -V | tail -1)
+    [ -n "$candidate_version" ] || {
+        echo "no official Zen Cart v2.2 patch release found" >&2
+        exit 1
+    }
+    candidate_tag_oid=$(printf '%s\n' "$refs" |
+        awk -v ref="refs/tags/$candidate_version" '$2 == ref {print $1}')
+    candidate_commit=$(printf '%s\n' "$refs" |
+        awk -v ref="refs/tags/$candidate_version^{}" '$2 == ref {print $1}')
+    [ -n "$candidate_commit" ] || candidate_commit=$candidate_tag_oid
+    printf '%s\n' "$candidate_commit" | grep -Eq '^[0-9a-f]{40}$' || {
+        echo "unable to resolve official tag commit for $candidate_version" >&2
+        exit 1
+    }
+
+    [ -d "$CACHE_ROOT" ] || install -d -m 0700 "$CACHE_ROOT"
+    TEMP_DIR=$(mktemp -d "$CACHE_ROOT/turnkey-zencart-update.XXXXXX")
+    candidate_root="$TEMP_DIR/checkout"
+    git init -q "$candidate_root"
+    git -C "$candidate_root" fetch -q --depth=1 --no-tags \
+        "$REPO_URL" "refs/tags/$candidate_version"
+    git -C "$candidate_root" checkout -q --detach FETCH_HEAD
+    candidate_head=$(git -C "$candidate_root" rev-parse --verify HEAD)
+    [ "$candidate_head" = "$candidate_commit" ] || {
+        echo "fetched checkout does not match official tag commit for $candidate_version" >&2
+        exit 1
+    }
+
+    candidate_archive="$TEMP_DIR/zencart.zip"
+    candidate_url="https://github.com/zencart/zencart/archive/refs/tags/$candidate_version.zip"
+    curl -LfsS "$candidate_url" -o "$candidate_archive"
+    candidate_sha256=$(sha256sum "$candidate_archive" | awk '{print $1}')
+    candidate_archive_root="$TEMP_DIR/archive/zencart-${candidate_version#v}"
+    mkdir "$TEMP_DIR/archive"
+    unzip -q "$candidate_archive" -d "$TEMP_DIR/archive"
+    [ -f "$candidate_archive_root/includes/version.php" ] || {
+        echo "candidate archive has an unexpected layout" >&2
+        exit 1
+    }
+    [ -f "$candidate_root/includes/version.php" ] || {
+        echo "candidate checkout has an unexpected layout" >&2
+        exit 1
+    }
+    candidate_runtime=$(php -r 'include $argv[1]; echo PROJECT_VERSION_MAJOR, ".", PROJECT_VERSION_MINOR;' "$candidate_root/includes/version.php")
+    [ "$candidate_runtime" = "${candidate_version#v}" ] || {
+        echo "candidate version file does not match $candidate_version" >&2
+        exit 1
+    }
+}
+
+mode=
+dry_run=false
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --check) [ -z "$mode" ] || usage; mode=check ;;
+        --apply) [ -z "$mode" ] || usage; mode=apply ;;
+        --dry-run) dry_run=true ;;
+        *) usage ;;
+    esac
+    shift
+done
+[ -n "$mode" ] || usage
+[ "$mode" = apply ] || [ "$dry_run" = false ] || usage
+[ -f "$SOURCE_RECORD" ] || {
+    echo "missing installed source record" >&2
+    exit 1
+}
+
+installed_version=$(record_value version)
+installed_commit=$(record_value tag_commit)
+installed_archive_sha256=$(record_value archive_sha256)
+installed_runtime=$(php -r 'include $argv[1]; echo PROJECT_VERSION_MAJOR, ".", PROJECT_VERSION_MINOR;' "$WEBROOT/includes/version.php")
+[ "$installed_runtime" = "${installed_version#v}" ] || {
+    echo "installed version differs from source record" >&2
+    exit 1
+}
+
+fetch_candidate
+
+if [ "$candidate_version" = "$installed_version" ]; then
+    [ "$candidate_commit" = "$installed_commit" ] || {
+        echo "official tag commit changed for installed release" >&2
+        exit 1
+    }
+    [ "$candidate_sha256" = "$installed_archive_sha256" ] || {
+        echo "official archive changed for installed release" >&2
+        exit 1
+    }
+fi
+
+status=update-available
+if ! dpkg --compare-versions "${installed_version#v}" lt "${candidate_version#v}"; then
+    status=up-to-date
+fi
+
+printf 'installed=%s\n' "$installed_version"
+printf 'candidate=%s\n' "$candidate_version"
+printf 'candidate_commit=%s\n' "$candidate_commit"
+printf 'candidate_archive_sha256=%s\n' "$candidate_sha256"
+printf 'channel=official Zen Cart v2.2 patch releases\n'
+printf 'status=%s\n' "$status"
+
+[ "$mode" = apply ] || exit 0
+if [ "$dry_run" = true ]; then
+    printf 'apply=dry-run verified exact candidate\n'
+    exit 0
+fi
+[ "$(id -u)" -eq 0 ] || {
+    echo "apply requires root" >&2
+    exit 1
+}
+if [ "$status" = up-to-date ]; then
+    printf 'apply=no-op\n'
+    exit 0
+fi
+
+rsync -a \
+    --exclude .git/ \
+    --exclude admin/ \
+    --exclude zc_install/ \
+    --exclude includes/configure.php \
+    --exclude cache/ \
+    --exclude download/ \
+    --exclude images/ \
+    --exclude logs/ \
+    --exclude media/ \
+    --exclude pub/ \
+    "$candidate_root/" "$WEBROOT/"
+rsync -a \
+    --exclude .git/ \
+    --exclude includes/configure.php \
+    "$candidate_root/admin/" "$WEBROOT/manage/"
+
+chown -R root:root "$WEBROOT"
+for path in \
+    pub media cache images download logs manage/backups manage/images/graphs \
+    includes/languages/english/html_includes; do
+    chown -R www-data:www-data "$WEBROOT/$path"
+done
+chown root:www-data \
+    "$WEBROOT/includes/configure.php" \
+    "$WEBROOT/manage/includes/configure.php"
+chmod 0640 \
+    "$WEBROOT/includes/configure.php" \
+    "$WEBROOT/manage/includes/configure.php"
+
+record_tmp="$TEMP_DIR/source"
+cat > "$record_tmp" <<EOF
+version=$candidate_version
+tag_commit=$candidate_commit
+archive_sha256=$candidate_sha256
+channel=official Zen Cart v2.2 patch releases
+EOF
+install -m 0644 "$record_tmp" "$SOURCE_RECORD"
+printf 'apply=complete\n'

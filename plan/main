@@ -4,6 +4,11 @@
 php-gd
 php-cli
 php-curl
+php-intl
+php-mbstring
+php-zip
 
 unzip
-
+git
+jq
+rsync
